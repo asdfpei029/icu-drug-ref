@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#2563eb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>ICU Drug Ref</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f6fb;--card:#fff;--border:#dde1f0;--border2:#c7cfe0;
+  --text:#1a1d2e;--text2:#4a5068;--text3:#8890aa;
+  --primary:#2563eb;--primary-bg:#eff6ff;--primary-lt:#dbeafe;--primary-dk:#1d4ed8;
+  --success:#16a34a;--success-bg:#f0fdf4;--success-lt:#bbf7d0;
+  --danger:#dc2626;--danger-bg:#fef2f2;--danger-lt:#fecaca;
+  --warning:#d97706;--warning-bg:#fffbeb;--warning-lt:#fde68a;
+  --orange:#ea580c;--orange-bg:#fff7ed;
+  --purple:#7c3aed;--purple-bg:#f5f3ff;
+  --mono:'IBM Plex Mono',monospace;
+  --sans:'Noto Sans TC',sans-serif;
+  --nav-h:60px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:16px}
+body{overflow:hidden;display:flex;flex-direction:column}
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh}
+
+/* ── HEADER ── */
+#hdr{background:var(--card);border-bottom:1.5px solid var(--border);padding:12px 16px 0;flex-shrink:0;z-index:50}
+#hdr-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+#logo{display:flex;align-items:center;gap:9px}
+#logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--primary),#1d4ed8);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+#logo-text{font-size:17px;font-weight:700}
+#logo-sub{font-size:11px;color:var(--text3)}
+#load-badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:10px;background:var(--warning-bg);color:var(--warning)}
+#load-badge.ok{background:var(--success-bg);color:var(--success)}
+#srch-wrap{position:relative;margin-bottom:10px}
+#srch-wrap input{width:100%;padding:10px 36px 10px 38px;border:1.5px solid var(--border);border-radius:12px;font-size:16px;background:var(--bg);color:var(--text);outline:none;-webkit-appearance:none;font-family:var(--sans)}
+#srch-wrap input:focus{border-color:var(--primary);background:#fff}
+#srch-wrap input::placeholder{color:var(--text3)}
+.srch-ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none}
+#srch-clear{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:var(--bg);border:none;border-radius:6px;color:var(--text3);font-size:12px;padding:2px 8px;cursor:pointer;display:none}
+#srch-dd{position:absolute;top:100%;left:0;right:0;background:var(--card);border:1.5px solid var(--border);border-top:none;border-radius:0 0 12px 12px;max-height:260px;overflow-y:auto;display:none;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.08)}
+.dd-item{padding:11px 16px;border-bottom:1px solid var(--border);cursor:pointer}
+.dd-item:last-child{border-bottom:none}
+.dd-item:active{background:var(--bg)}
+.dd-name{font-size:16px;font-weight:700;font-family:var(--mono)}
+.dd-sub{font-size:12px;color:var(--text2);margin-top:2px}
+
+/* ── CAT TABS ── */
+#cat-tabs{display:flex;gap:5px;overflow-x:auto;padding:0 0 10px;scrollbar-width:none}
+#cat-tabs::-webkit-scrollbar{display:none}
+.cat-tab{padding:7px 14px;border-radius:20px;font-size:14px;font-weight:500;border:1.5px solid var(--border);background:var(--card);color:var(--text2);cursor:pointer;white-space:nowrap;flex-shrink:0;font-family:var(--sans)}
+.cat-tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+/* ── CONTENT ── */
+#content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 8px)}
+.section{display:none;padding:12px 16px}
+.section.active{display:block}
+
+/* ── CAT GRID ── */
+.cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.cat-tile{background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:14px 6px;cursor:pointer;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px}
+.cat-tile:active{background:var(--bg)}
+.cat-icon{font-size:24px}
+.cat-label{font-size:11px;font-weight:600;color:var(--text2);line-height:1.4}
+.cat-tile.vasopressor{border-top:3px solid #f97316}
+.cat-tile.antihypertensive{border-top:3px solid #8b5cf6}
+.cat-tile.rsi{border-top:3px solid #f59e0b}
+.cat-tile.sedation{border-top:3px solid #7c3aed}
+.cat-tile.anticoagulation{border-top:3px solid #ec4899}
+.cat-tile.electrolyte{border-top:3px solid #06b6d4}
+.cat-tile.antiinfective{border-top:3px solid #16a34a}
+.cat-tile.neuro{border-top:3px solid #2563eb}
+
+/* ── DRUG LIST ── */
+.list-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.list-title{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text3);letter-spacing:1.5px}
+.list-cnt{font-family:var(--mono);font-size:11px;color:var(--primary);background:var(--primary-bg);padding:3px 10px;border-radius:10px;font-weight:600}
+.disclaimer{background:var(--warning-bg);border:1px solid var(--warning-lt);border-radius:12px;padding:10px 13px;font-size:13px;color:var(--warning);line-height:1.6;margin-bottom:12px}
+
+/* ── DRUG CARD ── */
+.drug-card{background:var(--card);border:1.5px solid var(--border);border-radius:16px;margin-bottom:10px;overflow:hidden}
+.drug-card.ha{border-left:4px solid var(--danger)}
+.drug-card:active{border-color:var(--primary)}
+
+/* Quick Order bar */
+.qo-bar{background:var(--primary-bg);border-bottom:1px solid var(--primary-lt);padding:9px 14px}
+.qo-lbl{font-family:var(--mono);font-size:9px;font-weight:700;color:var(--primary);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px}
+.qo-txt{font-family:var(--mono);font-size:13px;color:var(--primary-dk);line-height:1.7}
+
+/* Card header */
+.card-hdr{padding:13px 14px 0;cursor:pointer;display:flex;align-items:flex-start;gap:10px}
+.card-name-col{flex:1}
+.card-name{font-size:20px;font-weight:700;font-family:var(--mono);margin-bottom:2px}
+.card-brand{font-size:12px;color:var(--text3);margin-bottom:6px}
+.card-tags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
+.tag{font-size:11px;font-weight:600;padding:2px 9px;border-radius:100px}
+.tag-red{background:var(--danger-bg);color:var(--danger)}
+.tag-blue{background:var(--primary-bg);color:var(--primary-dk)}
+.tag-green{background:var(--success-bg);color:var(--success)}
+.tag-orange{background:var(--orange-bg);color:var(--orange)}
+.tag-yellow{background:var(--warning-bg);color:var(--warning)}
+.tag-purple{background:var(--purple-bg);color:var(--purple)}
+.fav-btn{background:none;border:none;font-size:22px;cursor:pointer;color:var(--text3);padding:0;flex-shrink:0}
+.fav-btn.on{color:#f59e0b}
+.chev{font-size:14px;color:var(--text3);flex-shrink:0;transition:transform .2s;padding-top:4px}
+.drug-card.open .chev{transform:rotate(180deg)}
+
+/* Quick view */
+.qv{padding:0 14px 13px}
+.qv-row{display:flex;gap:7px;padding:6px 0;border-bottom:1px solid var(--border);font-size:15px}
+.qv-row:last-child{border-bottom:none}
+.qv-lbl{font-size:11px;color:var(--text3);min-width:48px;padding-top:2px;flex-shrink:0;font-family:var(--mono);letter-spacing:.5px}
+.qv-val{color:var(--text);flex:1;line-height:1.5}
+.qv-val.mono{font-family:var(--mono);font-size:14px;color:var(--primary-dk)}
+.qv-val.central{color:var(--orange)}
+.qv-val.peri{color:var(--success)}
+.warn-box{background:var(--danger-bg);border-left:3px solid var(--danger);border-radius:0 10px 10px 0;padding:9px 12px;margin:6px 0}
+.warn-row{display:flex;gap:6px;font-size:14px;color:var(--danger);margin-bottom:3px;line-height:1.5}
+.warn-row:last-child{margin-bottom:0}
+
+/* Expanded view */
+.exp-view{display:none;padding:0 14px 14px}
+.drug-card.open .exp-view{display:block}
+.exp-divider{height:1px;background:var(--border);margin:4px 0 12px}
+.exp-sec{margin-bottom:12px}
+.exp-title{font-family:var(--mono);font-size:9px;font-weight:700;color:#06b6d4;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px}
+.exp-content{font-size:14px;color:var(--text2);line-height:1.8}
+.exp-content .hi{color:var(--text);font-weight:600}
+.exp-content .red{color:var(--danger)}
+.exp-content .warn{color:var(--warning)}
+.dose-box{background:var(--bg);border-radius:10px;padding:10px 12px;margin-bottom:6px;border:1px solid var(--border)}
+.dose-box-label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.dose-box-val{font-size:14px;color:var(--text);line-height:1.6}
+.ref-line{font-size:11px;color:var(--text3);margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-family:var(--mono);line-height:1.8}
+
+/* ── CALC SECTION ── */
+.calc-wrap{background:var(--bg);border-radius:13px;padding:14px;margin-top:13px;border:1px solid var(--border)}
+.calc-hdr{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--primary);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:13px}
+.calc-step{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:7px;display:flex;align-items:center;gap:6px}
+.step-num{width:20px;height:20px;border-radius:50%;background:var(--primary);color:#fff;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.calc-row{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.c-inp{padding:10px 10px;border:1.5px solid var(--border);border-radius:9px;font-size:17px;font-weight:600;background:var(--card);color:var(--text);outline:none;-webkit-appearance:none;font-family:var(--mono);text-align:center}
+.c-inp:focus{border-color:var(--primary)}
+.c-inp.sm{width:70px}.c-inp.md{width:88px}
+.c-sel{padding:10px 8px;border:1.5px solid var(--border);border-radius:9px;font-size:14px;background:var(--card);color:var(--text);outline:none;-webkit-appearance:none;font-family:var(--sans);cursor:pointer}
+.c-sel:focus{border-color:var(--primary)}
+.c-unit{font-size:13px;color:var(--text2);font-family:var(--mono);white-space:nowrap}
+.conc-disp{background:var(--primary-bg);border:1px solid var(--primary-lt);border-radius:9px;padding:10px 13px;font-size:14px;font-weight:600;color:var(--primary-dk);font-family:var(--mono);margin:8px 0;min-height:42px;word-break:break-all;line-height:1.5}
+.c-note{font-size:12px;color:var(--warning);background:var(--warning-bg);border-radius:7px;padding:6px 10px;margin-top:6px;line-height:1.6}
+.calc-go{width:100%;padding:13px;background:var(--primary);color:#fff;border:none;border-radius:12px;font-size:17px;font-weight:700;cursor:pointer;font-family:var(--sans);margin-top:4px}
+.calc-go:active{background:var(--primary-dk)}
+.calc-result{background:var(--card);border:2px solid var(--primary);border-radius:13px;margin-top:10px;overflow:hidden;display:none}
+.calc-result.show{display:block}
+.result-hdr{background:linear-gradient(90deg,var(--primary),#3b82f6);padding:10px 16px;font-family:var(--mono);font-size:12px;font-weight:700;color:#fff}
+.pump-hero{background:var(--primary-bg);padding:20px 18px;text-align:center}
+.pump-label{font-size:13px;font-weight:600;color:var(--primary-dk);margin-bottom:7px}
+.pump-val{font-size:42px;font-weight:700;color:var(--primary);font-family:var(--mono);line-height:1}
+.pump-unit{font-size:18px;margin-left:4px}
+.pump-sub{font-size:13px;color:var(--text2);margin-top:7px}
+.bolus-hero{background:var(--success-bg);padding:20px 18px;text-align:center}
+.bolus-val{font-size:42px;font-weight:700;color:var(--success);font-family:var(--mono)}
+.bolus-unit{font-size:18px;margin-left:4px;color:var(--success)}
+.result-rows{padding:10px 16px}
+.r-row{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--border)}
+.r-row:last-child{border-bottom:none}
+.r-lbl{font-size:14px;color:var(--text2)}
+.r-val{font-size:16px;font-weight:700;color:var(--text);font-family:var(--mono)}
+
+/* ── BOTTOM NAV ── */
+#nav{position:fixed;bottom:0;left:0;right:0;height:calc(var(--nav-h) + env(safe-area-inset-bottom,0px));background:var(--card);border-top:1.5px solid var(--border);display:flex;padding-bottom:env(safe-area-inset-bottom,0px);z-index:100}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;border:none;background:none;color:var(--text3);font-size:11px;font-weight:500;font-family:var(--sans)}
+.nav-btn.active{color:var(--primary)}
+.nav-ico{font-size:22px;line-height:1}
+
+/* ── FAV / EMPTY ── */
+.hist-item{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:13px 15px;margin-bottom:9px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.hist-item:active{background:var(--bg)}
+.hist-name{font-size:17px;font-weight:700;font-family:var(--mono)}
+.hist-sub{font-size:13px;color:var(--text2);margin-top:2px}
+.empty{text-align:center;padding:50px 20px;color:var(--text3);font-size:15px}
+.empty-ico{font-size:42px;margin-bottom:12px}
+
+/* ── LOADING ── */
+.spin{display:inline-block;width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-center{text-align:center;padding:40px;color:var(--text3);font-size:14px}
+
+/* ── REFS ── */
+.refs-intro{background:var(--primary-bg);border:1px solid var(--primary-lt);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--primary-dk);line-height:1.7;margin-bottom:14px}
+.ref-group{margin-bottom:18px}
+.ref-group-title{font-family:var(--mono);font-size:10px;font-weight:700;color:#06b6d4;letter-spacing:2px;text-transform:uppercase;padding:6px 0 8px;border-bottom:1px solid var(--border);margin-bottom:10px}
+.ref-item{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px}
+.ref-num{font-family:var(--mono);font-size:10px;color:var(--primary);margin-bottom:3px;font-weight:600}
+.ref-ttl{font-size:14px;color:var(--text);line-height:1.5;margin-bottom:2px;font-weight:600}
+.ref-det{font-size:12px;color:var(--text2);font-family:var(--mono);line-height:1.5}
+.ref-link{display:inline-block;margin-top:5px;font-size:11px;color:var(--primary);background:var(--primary-bg);padding:2px 9px;border-radius:6px;text-decoration:none;font-family:var(--mono);font-weight:600}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- HEADER -->
+<div id="hdr">
+  <div id="hdr-top">
+    <div id="logo">
+      <div id="logo-icon">🏥</div>
+      <div>
+        <div id="logo-text">ICU Drug Ref</div>
+        <div id="logo-sub">CRITICAL CARE · ADULT ICU</div>
+      </div>
+    </div>
+    <div id="load-badge">載入中...</div>
+  </div>
+  <div id="srch-wrap">
+    <span class="srch-ico">🔍</span>
+    <input type="text" id="srchInput" placeholder="搜尋藥名、商品名、適應症..." autocomplete="off">
+    <button id="srchClear">✕</button>
+    <div id="srch-dd"></div>
+  </div>
+  <div id="cat-tabs">
+    <button class="cat-tab active" data-cat="all">全部</button>
+    <button class="cat-tab" data-cat="vasopressor">升壓／強心</button>
+    <button class="cat-tab" data-cat="antihypertensive">降壓／心律</button>
+    <button class="cat-tab" data-cat="rsi">插管／RSI</button>
+    <button class="cat-tab" data-cat="sedation">鎮靜／止痛</button>
+    <button class="cat-tab" data-cat="anticoagulation">抗凝／止血</button>
+    <button class="cat-tab" data-cat="electrolyte">電解質</button>
+    <button class="cat-tab" data-cat="antiinfective">抗感染</button>
+    <button class="cat-tab" data-cat="neuro">神經急症</button>
+    <button class="cat-tab" data-cat="emergency">急症處置</button>
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div id="content">
+
+  <!-- HOME / DRUG LIST -->
+  <div class="section active" id="sec-home">
+    <div class="cat-grid" id="catGrid">
+      <div class="cat-tile vasopressor" data-cat="vasopressor"><div class="cat-icon">💉</div><div class="cat-label">升壓<br>強心</div></div>
+      <div class="cat-tile antihypertensive" data-cat="antihypertensive"><div class="cat-icon">📉</div><div class="cat-label">降壓<br>心律</div></div>
+      <div class="cat-tile rsi" data-cat="rsi"><div class="cat-icon">🫁</div><div class="cat-label">插管<br>RSI</div></div>
+      <div class="cat-tile sedation" data-cat="sedation"><div class="cat-icon">😴</div><div class="cat-label">鎮靜<br>止痛</div></div>
+      <div class="cat-tile anticoagulation" data-cat="anticoagulation"><div class="cat-icon">🩸</div><div class="cat-label">抗凝<br>止血</div></div>
+      <div class="cat-tile electrolyte" data-cat="electrolyte"><div class="cat-icon">⚡</div><div class="cat-label">電解質</div></div>
+      <div class="cat-tile antiinfective" data-cat="antiinfective"><div class="cat-icon">🦠</div><div class="cat-label">抗感染</div></div>
+      <div class="cat-tile neuro" data-cat="neuro"><div class="cat-icon">🧠</div><div class="cat-label">神經<br>急症</div></div>
+    </div>
+    <div class="disclaimer">⚠ 本工具僅供成人 ICU 醫師床邊速查參考。所有劑量需依個別病人狀況、最新 guideline 及院內政策調整。</div>
+    <div class="list-hdr">
+      <div class="list-title" id="listTitle">ALL DRUGS</div>
+      <div class="list-cnt" id="listCnt">–</div>
+    </div>
+    <div id="drugList"><div class="load-center"><div class="spin"></div><br>從 Google Sheets 載入資料中...</div></div>
+  </div>
+
+  <!-- FAVORITES -->
+  <div class="section" id="sec-fav">
+    <div class="list-hdr"><div class="list-title">我的收藏</div></div>
+    <div id="favList"><div class="empty"><div class="empty-ico">⭐</div>尚無收藏<br><br>點藥卡右上角 ☆ 加入</div></div>
+  </div>
+
+  <!-- REFERENCES -->
+  <div class="section" id="sec-refs">
+    <div id="refsList"></div>
+  </div>
+
+</div><!-- /content -->
+
+<!-- NAV -->
+<nav id="nav">
+  <button class="nav-btn active" data-view="home"><span class="nav-ico">🏠</span>藥物速查</button>
+  <button class="nav-btn" data-view="fav"><span class="nav-ico">⭐</span>收藏</button>
+  <button class="nav-btn" data-view="refs"><span class="nav-ico">📚</span>文獻</button>
+</nav>
+
+</div><!-- /app -->
+
+<script>
+// ══ CONFIG ══
+var API_URL = 'https://script.google.com/macros/s/AKfycbwXERZRw13K6Wa4HvBGYGo9WcvFJPiVFsLoy1DkTZMwgXEgGstA8ysRA6n8132mZ_2P/exec';
+
+// ══ STATE ══
+var drugs = [];
+var calcMap = {};   // id → calc row(s)
+var favs = [];
+var expandedCards = {};
+var currentCat = 'all';
+
+// ══ STORAGE ══
+function storageGet(k){ try{ return JSON.parse(localStorage.getItem(k)||'null'); }catch(e){ return null; } }
+function storageSet(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+
+// ══ LOAD DATA ══
+function loadData(){
+  fetch(API_URL)
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      drugs = (data.drugs || []).sort(function(a,b){ return a.name.localeCompare(b.name); });
+      var calcArr = data.calc || [];
+      calcArr.forEach(function(c){
+        if(!calcMap[c.id]) calcMap[c.id] = [];
+        calcMap[c.id].push(c);
+      });
+      favs = storageGet('icu_favs') || [];
+      var badge = document.getElementById('load-badge');
+      badge.textContent = '✅ ' + drugs.length + ' 種藥';
+      badge.className = 'ok';
+      filterCat('all');
+    })
+    .catch(function(err){
+      document.getElementById('load-badge').textContent = '⚠ 載入失敗';
+      document.getElementById('drugList').innerHTML =
+        '<div class="load-center" style="color:var(--danger)">載入失敗<br><small>'+err.message+'</small></div>';
+    });
+}
+
+// ══ RENDER DRUGS ══
+function filterCat(cat){
+  currentCat = cat;
+  // Update tabs
+  document.querySelectorAll('.cat-tab').forEach(function(b){
+    b.className = 'cat-tab' + (b.dataset.cat===cat?' active':'');
+  });
+  // Show/hide grid
+  var grid = document.getElementById('catGrid');
+  grid.style.display = cat==='all' ? 'grid' : 'none';
+  // Filter
+  var list = cat==='all' ? drugs : drugs.filter(function(d){ return d.category===cat; });
+  renderList(list, cat==='all'?'ALL DRUGS':cat.toUpperCase());
+}
+
+function renderList(list, title){
+  document.getElementById('listTitle').textContent = title;
+  document.getElementById('listCnt').textContent = list.length;
+  var el = document.getElementById('drugList');
+  if(!list.length){ el.innerHTML='<div class="empty">找不到符合藥物</div>'; return; }
+  el.innerHTML = list.map(renderCard).join('');
+}
+
+function renderCard(d){
+  var isFav = favs.indexOf(d.id)>=0;
+  var isOpen = !!expandedCards[d.id];
+  var c = calcMap[d.id];
+
+  // Tags
+  var tags = '';
+  if(d.highAlert) tags+='<span class="tag tag-red">⬥ 高警示</span>';
+  var catTag = {vasopressor:'tag-orange',antihypertensive:'tag-purple',
+    rsi:'tag-yellow',sedation:'tag-purple',anticoagulation:'tag-orange',
+    electrolyte:'tag-blue',antiinfective:'tag-green',neuro:'tag-blue',emergency:'tag-red'};
+  var catLbl = {vasopressor:'升壓',antihypertensive:'降壓',rsi:'RSI',
+    sedation:'鎮靜',anticoagulation:'抗凝',electrolyte:'電解質',
+    antiinfective:'抗感染',neuro:'神經',emergency:'急症'};
+  if(catTag[d.category]) tags+='<span class="tag '+catTag[d.category]+'">'+(catLbl[d.category]||d.category)+'</span>';
+
+  // Brand names
+  var brands = Array.isArray(d.brandName) ? d.brandName.join(' / ') : (d.brandName||'');
+
+  // Warnings
+  var warns = '';
+  if(d.warnings && d.warnings.length){
+    warns = '<div class="warn-box">'
+      + d.warnings.map(function(w){ return '<div class="warn-row"><span>⚠</span><span>'+esc(w)+'</span></div>'; }).join('')
+      + '</div>';
+  }
+
+  // Route class
+  var routeCls = (d.route||'').indexOf('中央')>=0 ? 'central' : 'peri';
+
+  // Dose boxes (expanded)
+  var doseSections = '';
+  if(d.dose_main) doseSections += doseBox('主要劑量', d.dose_main);
+  if(d.dose_acls) doseSections += doseBox('ACLS 劑量', d.dose_acls);
+  if(d.dose_im)   doseSections += doseBox('IM 劑量', d.dose_im);
+  if(d.dose_other) doseSections += doseBox('其他用法', d.dose_other);
+
+  // Adjustment
+  var adj = '';
+  if(d.renal||d.hepatic||d.dialysis){
+    adj = '<div class="exp-sec"><div class="exp-title">劑量調整</div><div class="exp-content">'
+      + (d.renal ? '<span class="hi">腎：</span>'+esc(d.renal)+'<br>' : '')
+      + (d.hepatic ? '<span class="hi">肝：</span>'+esc(d.hepatic)+'<br>' : '')
+      + (d.dialysis ? '<span class="hi">透析：</span>'+esc(d.dialysis) : '')
+      + '</div></div>';
+  }
+
+  return '<div class="drug-card'+(d.highAlert?' ha':'')+(isOpen?' open':'')+'" id="card-'+d.id+'">'
+    // Quick order bar
+    + (d.quickOrder ? '<div class="qo-bar"><div class="qo-lbl">⚡ Quick Order</div><div class="qo-txt">'+nl(esc(d.quickOrder))+'</div></div>' : '')
+    // Header
+    + '<div class="card-hdr" onclick="toggleCard(\''+d.id+'\')">'
+    + '<div class="card-name-col">'
+    + '<div class="card-name">'+esc(d.name)+'</div>'
+    + (brands?'<div class="card-brand">'+esc(brands)+'</div>':'')
+    + '<div class="card-tags">'+tags+'</div>'
+    + '</div>'
+    + '<button class="fav-btn'+(isFav?' on':'')+'" onclick="event.stopPropagation();toggleFav(\''+d.id+'\')">'+(isFav?'★':'☆')+'</button>'
+    + '<span class="chev">▾</span>'
+    + '</div>'
+    // Quick view
+    + '<div class="qv">'
+    + '<div class="qv-row"><span class="qv-lbl">適應症</span><span class="qv-val">'+esc(d.indication)+'</span></div>'
+    + '<div class="qv-row"><span class="qv-lbl">劑量</span><span class="qv-val mono">'+nl(esc(d.dose_main))+'</span></div>'
+    + '<div class="qv-row"><span class="qv-lbl">途徑</span><span class="qv-val '+routeCls+'">'+esc(d.route)+'</span></div>'
+    + warns
+    + '</div>'
+    // Expanded view
+    + '<div class="exp-view">'
+    + '<div class="exp-divider"></div>'
+    + (doseSections.length > doseBox('主要劑量',d.dose_main||'').length ? doseSections : '') // only show extra doses
+    + (d.contraindications?'<div class="exp-sec"><div class="exp-title">禁忌症</div><div class="exp-content red">'+esc(d.contraindications)+'</div></div>':'')
+    + (d.monitoring?'<div class="exp-sec"><div class="exp-title">監測重點</div><div class="exp-content">'+esc(d.monitoring)+'</div></div>':'')
+    + adj
+    + (d.notes?'<div class="exp-sec"><div class="exp-title">臨床備註</div><div class="exp-content">'+esc(d.notes)+'</div></div>':'')
+    + renderCalcSection(d)
+    + '</div>'
+    + '</div>';
+}
+
+function doseBox(label, val){
+  if(!val) return '';
+  return '<div class="dose-box"><div class="dose-box-label">'+label+'</div><div class="dose-box-val">'+nl(esc(val))+'</div></div>';
+}
+
+// ══ CALC ══
+function renderCalcSection(d){
+  var calcs = calcMap[d.id];
+  if(!calcs||!calcs.length) return '';
+
+  var h = '<div class="calc-wrap"><div class="calc-hdr">💉 泡藥計算機</div>';
+
+  calcs.forEach(function(c, idx){
+    var cid = d.id + '_' + idx;
+    var isBolus = c.isBolus || (c.doseUnit||'').indexOf('bolus')>=0;
+    var needWt = c.weightBased;
+
+    h += '<div style="margin-bottom:16px">';
+    if(calcs.length>1) h += '<div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:10px">▸ '+esc(c.label)+'</div>';
+
+    // Step 1: Prep
+    h += '<div class="calc-step"><span class="step-num">1</span>泡法設定</div>';
+    h += '<div class="calc-row">'
+      + '<input class="c-inp md" type="number" id="str_'+cid+'" value="'+c.ampStrength+'" min="0" step="any">'
+      + '<span class="c-unit">'+esc(c.ampUnit)+'/支，每支</span>'
+      + '<input class="c-inp sm" type="number" id="vol_'+cid+'" value="'+(c.ampVol||1)+'" min="0" step="any">'
+      + '<span class="c-unit">mL</span>'
+      + '</div>';
+    h += '<div class="calc-row">'
+      + '<span class="c-unit">使用</span>'
+      + '<input class="c-inp sm" type="number" id="num_'+cid+'" value="1" min="0.5" step="0.5">'
+      + '<span class="c-unit">支，加入</span>'
+      + '<select class="c-sel" id="dil_'+cid+'">'
+      + ['NS','D5W','D10W','LR','WI','不稀釋'].map(function(x){
+          return '<option'+(x===(c.defaultDiluent||'NS')?' selected':'')+'>'+x+'</option>';
+        }).join('')
+      + '</select>'
+      + '<input class="c-inp sm" type="number" id="bvol_'+cid+'" value="'+(c.defaultBagVol||100)+'" min="1">'
+      + '<span class="c-unit">mL</span>'
+      + '</div>';
+    h += '<div class="conc-disp" id="concd_'+cid+'">請填入泡法後自動顯示</div>';
+    if(c.calcNote) h += '<div class="c-note">⚠ '+esc(c.calcNote)+'</div>';
+
+    // Step 2: Dose
+    if(!isBolus){
+      h += '<div class="calc-step" style="margin-top:10px"><span class="step-num">2</span>劑量範圍</div>';
+      h += '<div class="calc-row">'
+        + '<input class="c-inp md" type="number" id="dmin_'+cid+'" value="'+c.doseMin+'" step="any">'
+        + '<span class="c-unit">~</span>'
+        + '<input class="c-inp md" type="number" id="dmax_'+cid+'" value="'+c.doseMax+'" step="any">'
+        + '<select class="c-sel" id="dunit_'+cid+'">'
+        + ['mcg/kg/min','mcg/kg/hr','mg/kg/hr','mcg/min','mg/min','mcg/hr','mg/hr','U/min','U/hr','g/hr'].map(function(x){
+            return '<option'+(x===c.doseUnit?' selected':'')+'>'+x+'</option>';
+          }).join('')
+        + '</select>'
+        + '</div>';
+    } else {
+      h += '<div class="calc-step" style="margin-top:10px"><span class="step-num">2</span>給藥劑量</div>';
+      h += '<div class="calc-row">'
+        + '<input class="c-inp md" type="number" id="dmin_'+cid+'" value="'+c.doseMin+'" step="any">'
+        + '<span class="c-unit">'+esc(c.doseUnit)+'</span>'
+        + (c.maxDose?'<span class="c-unit">（最大 '+c.maxDose+' '+c.ampUnit+'）</span>':'')
+        + '</div>';
+    }
+
+    if(needWt){
+      h += '<div class="calc-row"><span class="c-unit">體重</span>'
+        + '<input class="c-inp md" type="number" id="wt_'+cid+'" value="70" min="1" max="300">'
+        + '<span class="c-unit">kg</span></div>';
+    }
+
+    h += '<button class="calc-go" data-cid="'+cid+'" data-idx="'+idx+'" data-drugid="'+d.id+'">▶ 計算</button>';
+    h += '<div class="calc-result" id="res_'+cid+'"></div>';
+    h += '</div>';
+  });
+
+  h += '</div>';
+  return h;
+}
+
+// Calc button click
+document.addEventListener('click', function(e){
+  var btn = e.target.closest('[data-cid]');
+  if(!btn) return;
+  doCalc(btn.dataset.drugid, btn.dataset.cid, parseInt(btn.dataset.idx));
+});
+
+// Live conc update
+document.addEventListener('input', function(e){
+  var el = e.target;
+  var id = el.id || '';
+  var match = id.match(/^(str|vol|num|bvol)_(.+)$/);
+  if(!match) return;
+  updateConc(match[2]);
+});
+document.addEventListener('change', function(e){
+  var el = e.target;
+  var id = el.id || '';
+  var match = id.match(/^dil_(.+)$/);
+  if(!match) return;
+  updateConc(match[1]);
+});
+
+function updateConc(cid){
+  var str  = pf('str_'+cid, 0);
+  var avol = pf('vol_'+cid, 1);
+  var num  = pf('num_'+cid, 1);
+  var dil  = gv('dil_'+cid) || 'NS';
+  var bvol = pf('bvol_'+cid, 100);
+  var el   = document.getElementById('concd_'+cid);
+  if(!el) return;
+
+  // Get ampUnit from calc data
+  var parts = cid.split('_');
+  var drugId = parts.slice(0,-1).join('_');
+  var idx = parseInt(parts[parts.length-1]);
+  var c = calcMap[drugId] && calcMap[drugId][idx];
+  var au = c ? c.ampUnit : 'mg';
+
+  var totalDrug = str * num;
+  var totalVol = (dil==='不稀釋') ? (avol*num) : bvol;
+  var conc = totalDrug / totalVol;
+
+  var txt = num+'支 → '+totalDrug+' '+au;
+  txt += ' / ' + dil + ' ' + bvol + 'mL';
+  if(au==='mg')      txt += ' = '+rnd(conc*1000,1)+' mcg/mL（'+rnd(conc,4)+' mg/mL）';
+  else if(au==='mcg') txt += ' = '+rnd(conc,2)+' mcg/mL';
+  else if(au==='U')  txt += ' = '+rnd(conc,3)+' U/mL';
+  else if(au==='g')  txt += ' = '+rnd(conc,4)+' g/mL（'+rnd(conc*1000,2)+' mg/mL）';
+  else txt += ' = '+rnd(conc,4)+' '+au+'/mL';
+  el.textContent = txt;
+}
+
+function doCalc(drugId, cid, idx){
+  var c = calcMap[drugId] && calcMap[drugId][idx];
+  if(!c) return;
+  var str  = pf('str_'+cid, c.ampStrength);
+  var avol = pf('vol_'+cid, c.ampVol||1);
+  var num  = pf('num_'+cid, 1);
+  var dil  = gv('dil_'+cid) || c.defaultDiluent || 'NS';
+  var bvol = pf('bvol_'+cid, c.defaultBagVol||100);
+  var dmin = pf('dmin_'+cid, c.doseMin);
+  var dmax = pf('dmax_'+cid, c.doseMax||dmin);
+  var wt   = pf('wt_'+cid, 70);
+  var du   = gv('dunit_'+cid) || c.doseUnit || '';
+  var au   = c.ampUnit || 'mg';
+  var isBolus = c.isBolus || du.indexOf('bolus')>=0;
+  if(isBolus) dmax = dmin;
+
+  var totalDrug = str * num;
+  var totalVol = (dil==='不稀釋') ? (avol*num) : bvol;
+  var conc = totalDrug / totalVol; // ampUnit/mL
+
+  // Unit conversions for rate calc
+  var concMcg = au==='mg'?conc*1000:au==='mcg'?conc:au==='g'?conc*1e6:0;
+  var concMg  = au==='mg'?conc:au==='mcg'?conc/1000:au==='g'?conc*1000:0;
+  var concU   = au==='U'?conc:0;
+  var concG   = au==='g'?conc:au==='mg'?conc/1000:0;
+
+  function calcRate(dose){
+    if(isBolus){
+      var d = (c.weightBased?dose*wt:dose);
+      if(c.maxDose && d>c.maxDose) d = c.maxDose;
+      var cu = concMg||concMcg/1000||concU||concG;
+      if(au==='mg') return d/concMg;
+      if(au==='mcg') return (d*1000)/concMcg;
+      if(au==='U') return d/concU;
+      return d/conc;
+    }
+    var d = dose;
+    if(du.indexOf('mcg/kg/min')>=0) return (d*wt*60)/concMcg;
+    if(du.indexOf('mcg/kg/hr')>=0)  return (d*wt)/concMcg;
+    if(du.indexOf('mg/kg/hr')>=0)   return (d*wt)/concMg;
+    if(du.indexOf('U/kg/hr')>=0)    return (d*wt)/concU;
+    if(du.indexOf('U/min')>=0)      return (d*60)/concU;
+    if(du.indexOf('mcg/min')>=0)    return (d*60)/concMcg;
+    if(du.indexOf('mg/min')>=0)     return (d*60)/concMg;
+    if(du.indexOf('mcg/hr')>=0)     return d/concMcg;
+    if(du.indexOf('mg/hr')>=0)      return d/concMg;
+    if(du.indexOf('g/hr')>=0)       return d/concG;
+    if(du.indexOf('U/hr')>=0)       return d/concU;
+    return null;
+  }
+
+  var r1 = calcRate(dmin), r2 = calcRate(dmax);
+  var concDisp = document.getElementById('concd_'+cid);
+  if(concDisp) updateConc(cid);
+
+  var drug = drugs.filter(function(d){return d.id===drugId;})[0];
+  var drugName = drug ? drug.name : drugId;
+
+  var h = '<div class="result-hdr">📊 '+esc(drugName)+' · '+esc(c.label||'計算結果')+'</div>';
+  h += '<div class="result-rows">'
+    + rrow('泡法', num+'支 '+totalDrug+au+' / '+dil+' '+bvol+'mL')
+    + rrow('濃度', concDisp ? concDisp.textContent.split('= ').pop() : '')
+    + (c.weightBased ? rrow('體重', wt+' kg') : '');
+
+  if(isBolus){
+    var dose = c.weightBased ? dmin*wt : dmin;
+    if(c.maxDose && dose>c.maxDose) dose = c.maxDose;
+    var drawVol = au==='mg'?dose/concMg:au==='mcg'?(dose*1000)/concMcg:au==='U'?dose/concU:dose/conc;
+    h += rrow('給藥量', rnd(dose,1)+' '+au) + rrow('抽取量', rnd(drawVol,2)+' mL');
+    h += '</div><div class="bolus-hero"><div style="font-size:13px;font-weight:600;color:var(--success);margin-bottom:7px">💊 抽取量</div>'
+      + '<div class="bolus-val">'+rnd(drawVol,1)+'<span class="bolus-unit">mL</span></div>'
+      + '</div>';
+  } else {
+    h += rrow('劑量', dmin+(dmin!==dmax?'~'+dmax:'')+' '+du);
+    h += '</div>';
+    if(r1!==null){
+      h += '<div class="pump-hero">'
+        + '<div class="pump-label">⚡ 幫浦速率</div>'
+        + '<div class="pump-val">'+rnd(r1,2)+(r1!==r2?' ~ '+rnd(r2,2):'')+'<span class="pump-unit">mL/hr</span></div>'
+        + (r1!==r2?'<div class="pump-sub">起始 '+rnd(r1,2)+' → 最大 '+rnd(r2,2)+' mL/hr</div>':'')
+        + '</div>';
+    }
+  }
+
+  var res = document.getElementById('res_'+cid);
+  if(res){ res.innerHTML=h; res.className='calc-result show'; res.scrollIntoView({behavior:'smooth',block:'nearest'}); }
+}
+
+// ══ CARD TOGGLE ══
+function toggleCard(id){
+  var card = document.getElementById('card-'+id);
+  if(!card) return;
+  if(expandedCards[id]){
+    delete expandedCards[id];
+    card.className = card.className.replace(' open','');
+  } else {
+    expandedCards[id] = true;
+    if(card.className.indexOf('open')<0) card.className += ' open';
+    // Init conc displays
+    setTimeout(function(){
+      var calcs = calcMap[id] || [];
+      calcs.forEach(function(_,idx){ updateConc(id+'_'+idx); });
+    }, 60);
+  }
+}
+
+// ══ FAVORITES ══
+function toggleFav(id){
+  var i = favs.indexOf(id);
+  if(i>=0) favs.splice(i,1); else favs.unshift(id);
+  storageSet('icu_favs', favs);
+  var card = document.getElementById('card-'+id);
+  if(card){
+    var btn = card.querySelector('.fav-btn');
+    if(btn){ var on=favs.indexOf(id)>=0; btn.innerHTML=on?'★':'☆'; btn.className='fav-btn'+(on?' on':''); }
+  }
+  renderFavs();
+}
+
+function renderFavs(){
+  var el = document.getElementById('favList');
+  if(!favs.length){ el.innerHTML='<div class="empty"><div class="empty-ico">⭐</div>尚無收藏<br><br>點藥卡右上角 ☆ 加入</div>'; return; }
+  el.innerHTML = favs.map(function(id){
+    var d = getDrug(id); if(!d) return '';
+    return '<div class="hist-item" data-id="'+id+'"><div>'
+      +'<div class="hist-name">'+esc(d.name)+'</div>'
+      +'<div class="hist-sub">'+esc(d.indication.slice(0,40))+'...</div>'
+      +'</div><span>›</span></div>';
+  }).join('');
+  el.querySelectorAll('.hist-item').forEach(function(item){
+    item.addEventListener('click', function(){ jumpTo(this.dataset.id); });
+  });
+}
+
+function jumpTo(id){
+  showView('home');
+  filterCat('all');
+  document.getElementById('cat-tabs').querySelector('[data-cat="all"]').className='cat-tab active';
+  setTimeout(function(){
+    var card = document.getElementById('card-'+id);
+    if(card){ card.scrollIntoView({behavior:'smooth',block:'start'}); if(!expandedCards[id]) toggleCard(id); }
+  }, 150);
+}
+
+// ══ SEARCH ══
+document.getElementById('srchInput').addEventListener('input', function(){
+  var q = this.value.trim();
+  document.getElementById('srchClear').style.display = q ? 'block' : 'none';
+  var dd = document.getElementById('srch-dd');
+  if(!q){ dd.style.display='none'; return; }
+  var ql = q.toLowerCase();
+  var found = drugs.filter(function(d){
+    var brands = Array.isArray(d.brandName)?d.brandName.join(' '):String(d.brandName||'');
+    var alias  = Array.isArray(d.searchAlias)?d.searchAlias.join(' '):String(d.searchAlias||'');
+    var tags   = Array.isArray(d.tags)?d.tags.join(' '):String(d.tags||'');
+    return [d.name, brands, alias, d.indication||'', tags].some(function(s){
+      return s.toLowerCase().indexOf(ql)>=0;
+    });
+  }).slice(0,8);
+  if(!found.length){ dd.innerHTML='<div class="dd-item" style="color:var(--text3)">找不到符合藥物</div>'; dd.style.display='block'; return; }
+  dd.innerHTML = found.map(function(d){
+    var brands = Array.isArray(d.brandName)?d.brandName.join(' / '):String(d.brandName||'');
+    return '<div class="dd-item" data-id="'+d.id+'">'
+      +'<div class="dd-name">'+esc(d.name)+'</div>'
+      +'<div class="dd-sub">'+(brands?brands+' · ':'')+esc((d.indication||'').slice(0,40))+'...</div>'
+      +'</div>';
+  }).join('');
+  dd.style.display = 'block';
+  dd.querySelectorAll('.dd-item[data-id]').forEach(function(item){
+    item.addEventListener('click', function(){
+      document.getElementById('srchInput').value='';
+      document.getElementById('srchClear').style.display='none';
+      dd.style.display='none';
+      jumpTo(this.dataset.id);
+    });
+  });
+});
+
+document.getElementById('srchClear').addEventListener('click', function(){
+  document.getElementById('srchInput').value='';
+  this.style.display='none';
+  document.getElementById('srch-dd').style.display='none';
+});
+
+document.addEventListener('click', function(e){
+  if(!document.getElementById('srch-wrap').contains(e.target))
+    document.getElementById('srch-dd').style.display='none';
+});
+
+// ══ VIEW NAV ══
+function showView(name){
+  ['home','fav','refs'].forEach(function(v){
+    document.getElementById('sec-'+v).className='section'+(v===name?' active':'');
+  });
+  document.querySelectorAll('.nav-btn').forEach(function(b){
+    b.className='nav-btn'+(b.dataset.view===name?' active':'');
+  });
+  if(name==='fav') renderFavs();
+  if(name==='refs' && !document.getElementById('refsList').dataset.rendered) renderRefs();
+}
+
+document.querySelectorAll('.nav-btn').forEach(function(b){
+  b.addEventListener('click', function(){ showView(this.dataset.view); });
+});
+
+// ══ CAT TABS ══
+document.querySelectorAll('.cat-tab').forEach(function(b){
+  b.addEventListener('click', function(){ filterCat(this.dataset.cat); });
+});
+document.querySelectorAll('.cat-tile').forEach(function(tile){
+  tile.addEventListener('click', function(){ filterCat(this.dataset.cat); });
+});
+
+// ══ REFERENCES ══
+var REFS = [
+  {g:'🚨 急救 / ACLS',items:[
+    {n:'ACLS-1',t:'2020 AHA Guidelines for CPR and ECC',d:'Panchal AR et al. Circulation. 2020;142(16_suppl_2)',url:'https://pubmed.ncbi.nlm.nih.gov/33081529/',pmid:'33081529'}
+  ]},
+  {g:'🦠 敗血症 / 休克',items:[
+    {n:'SSC-1',t:'Surviving Sepsis Campaign 2021 Guidelines',d:'Evans L et al. Intensive Care Med. 2021;47(11):1181–1247.',url:'https://pubmed.ncbi.nlm.nih.gov/34599691/',pmid:'34599691'}
+  ]},
+  {g:'😴 鎮靜 / 止痛 (PADIS)',items:[
+    {n:'PADIS-1',t:'SCCM PADIS 2025 Focused Update',d:'Lewis K et al. Crit Care Med. 2025;53(3):e711–e727.',url:'https://pubmed.ncbi.nlm.nih.gov/39982143/',pmid:'39982143'},
+    {n:'PADIS-2',t:'SCCM PADIS 2018 Guidelines',d:'Devlin JW et al. Crit Care Med. 2018;46(9):e825–e873.',url:'https://pubmed.ncbi.nlm.nih.gov/30113379/',pmid:'30113379'}
+  ]},
+  {g:'🩸 抗凝',items:[
+    {n:'AC-1',t:'CHEST 2021 VTE Antithrombotic Guidelines',d:'Stevens SM et al. Chest. 2021;160(6):e545–e608.',url:'https://pubmed.ncbi.nlm.nih.gov/34352278/',pmid:'34352278'},
+    {n:'AC-2',t:'Vancomycin AUC Monitoring — ASHP/IDSA/SIDP 2020',d:'Rybak MJ et al. Am J Health Syst Pharm. 2020;77(11):835–864.',url:'https://pubmed.ncbi.nlm.nih.gov/32191793/',pmid:'32191793'}
+  ]},
+  {g:'🧠 神經急症',items:[
+    {n:'N-1',t:'ESETT: Three Anticonvulsants for Status Epilepticus',d:'Kapur J et al. N Engl J Med. 2019;381(22):2103–2113.',url:'https://pubmed.ncbi.nlm.nih.gov/31774955/',pmid:'31774955'},
+    {n:'N-2',t:'Brain Trauma Foundation TBI Guidelines 4th Ed',d:'Carney N et al. Neurosurgery. 2017;80(1):6–15.',url:'https://pubmed.ncbi.nlm.nih.gov/27654000/',pmid:'27654000'}
+  ]},
+  {g:'🦠 抗感染',items:[
+    {n:'ABX-1',t:'IDSA/ATS HAP/VAP Guidelines 2016',d:'Kalil AC et al. Clin Infect Dis. 2016;63(5):e61–e111.',url:'https://pubmed.ncbi.nlm.nih.gov/27418577/',pmid:'27418577'},
+    {n:'ABX-2',t:'IDSA Candidiasis Guidelines 2016',d:'Pappas PG et al. Clin Infect Dis. 2016;62(4):e1–50.',url:'https://pubmed.ncbi.nlm.nih.gov/26679628/',pmid:'26679628'}
+  ]},
+  {g:'🩸 止血',items:[
+    {n:'H-1',t:'CRASH-2: Tranexamic Acid in Trauma',d:'CRASH-2 Collaborators. Lancet. 2010;376(9734):23–32.',url:'https://pubmed.ncbi.nlm.nih.gov/20554319/',pmid:'20554319'}
+  ]},
+  {g:'🏥 資料來源',items:[
+    {n:'DB-1',t:'DailyMed — Official Prescribing Information',d:'U.S. National Library of Medicine. Accessed 2025.',url:'https://dailymed.nlm.nih.gov/',pmid:null}
+  ]}
+];
+
+function renderRefs(){
+  var el = document.getElementById('refsList');
+  el.dataset.rendered='1';
+  var h='<div class="refs-intro">所有臨床內容依：(1) 最新 Guideline (2) 官方仿單/DailyMed (3) Meta-analysis/RCT (4) 院內資料。劑量僅供參考，使用前核對。</div>';
+  REFS.forEach(function(g){
+    h+='<div class="ref-group"><div class="ref-group-title">'+esc(g.g)+'</div>';
+    g.items.forEach(function(r){
+      h+='<div class="ref-item"><div class="ref-num">['+esc(r.n)+']</div>'
+        +'<div class="ref-ttl">'+esc(r.t)+'</div>'
+        +'<div class="ref-det">'+esc(r.d)+'</div>'
+        +(r.pmid?'<a class="ref-link" href="'+r.url+'" target="_blank">PubMed '+r.pmid+' ↗</a>'
+               :r.url?'<a class="ref-link" href="'+r.url+'" target="_blank">連結 ↗</a>':'')
+        +'</div>';
+    });
+    h+='</div>';
+  });
+  h+='<div style="padding:14px;font-family:var(--mono);font-size:12px;color:var(--text3);line-height:2">v4.0 · 2025-05 · 58 種藥物<br>SSC 2021 / AHA ACLS 2020 / SCCM PADIS 2025<br>Institution-specific. Verify with local pharmacy policy.</div>';
+  el.innerHTML=h;
+}
+
+// ══ HELPERS ══
+function esc(s){ return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'):''; }
+function nl(s){ return s?String(s).replace(/\n/g,'<br>').replace(/\|/g,'<br>'):''; }
+function rnd(n,d){ return Math.round(n*Math.pow(10,d))/Math.pow(10,d); }
+function gv(id){ var e=document.getElementById(id); return e?e.value:''; }
+function pf(id,def){ var v=parseFloat(gv(id)); return isNaN(v)?def:v; }
+function getDrug(id){ return drugs.filter(function(d){return d.id===id;})[0]||null; }
+function rrow(lbl,val){ return '<div class="r-row"><span class="r-lbl">'+esc(lbl)+'</span><span class="r-val">'+esc(String(val))+'</span></div>'; }
+
+// ══ INIT ══
+loadData();
+</script>
+</body>
+</html>
