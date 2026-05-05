@@ -91,8 +91,8 @@ body{overflow:hidden;display:flex;flex-direction:column}
 .qo-txt{font-family:var(--mono);font-size:13px;color:var(--primary-dk);line-height:1.7}
 
 /* Card header */
-.card-hdr{padding:13px 14px 0;cursor:pointer;display:flex;align-items:flex-start;gap:10px}
-.card-name-col{flex:1}
+.card-hdr{padding:13px 14px 0;display:flex;align-items:flex-start;gap:6px}
+.card-name-col{flex:1;cursor:pointer}
 .card-name{font-size:20px;font-weight:700;font-family:var(--mono);margin-bottom:2px}
 .card-brand{font-size:12px;color:var(--text3);margin-bottom:6px}
 .card-tags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
@@ -103,9 +103,9 @@ body{overflow:hidden;display:flex;flex-direction:column}
 .tag-orange{background:var(--orange-bg);color:var(--orange)}
 .tag-yellow{background:var(--warning-bg);color:var(--warning)}
 .tag-purple{background:var(--purple-bg);color:var(--purple)}
-.fav-btn{background:none;border:none;font-size:22px;cursor:pointer;color:var(--text3);padding:0;flex-shrink:0}
+.fav-btn{background:none;border:none;font-size:24px;cursor:pointer;color:var(--text3);padding:0 2px;flex-shrink:0;line-height:1;min-width:36px;min-height:36px;display:flex;align-items:center;justify-content:center}
 .fav-btn.on{color:#f59e0b}
-.chev{font-size:14px;color:var(--text3);flex-shrink:0;transition:transform .2s;padding-top:4px}
+.chev{font-size:20px;color:var(--text3);flex-shrink:0;transition:transform .2s;cursor:pointer;min-width:36px;min-height:36px;display:flex;align-items:center;justify-content:center}
 .drug-card.open .chev{transform:rotate(180deg)}
 
 /* Quick view */
@@ -392,14 +392,14 @@ function renderCard(d){
     // Quick order bar
     + (d.quickOrder ? '<div class="qo-bar"><div class="qo-lbl">⚡ Quick Order</div><div class="qo-txt">'+nl(esc(d.quickOrder))+'</div></div>' : '')
     // Header
-    + '<div class="card-hdr" onclick="toggleCard(\''+d.id+'\')">'
-    + '<div class="card-name-col">'
+    + '<div class="card-hdr">'
+    + '<div class="card-name-col" onclick="toggleCard(\''+d.id+'\')">'
     + '<div class="card-name">'+esc(d.name)+'</div>'
     + (brands?'<div class="card-brand">'+esc(brands)+'</div>':'')
     + '<div class="card-tags">'+tags+'</div>'
     + '</div>'
     + '<button class="fav-btn'+(isFav?' on':'')+'" onclick="event.stopPropagation();toggleFav(\''+d.id+'\')">'+(isFav?'★':'☆')+'</button>'
-    + '<span class="chev">▾</span>'
+    + '<span class="chev" onclick="toggleCard(\''+d.id+'\')">▾</span>'
     + '</div>'
     // Quick view
     + '<div class="qv">'
